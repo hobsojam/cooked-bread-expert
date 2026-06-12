@@ -1,8 +1,8 @@
-import { feedbackCategories, feedbackOptions } from "./session-model";
+import { feedbackCategories } from "./session-model";
 
 export const sampleRoomCode = "BRIGHT-MAPLE-42";
 export const categories = [...feedbackCategories];
-export { feedbackOptions };
+export { feedbackOptions } from "./session-model";
 
 export const summaryHighlights = [
   "The message was easy to follow and centered on one clear idea.",
