@@ -110,8 +110,8 @@ function findGitExecutable() {
   const candidates =
     process.platform === "win32"
       ? [
-          "C:\\Program Files\\Git\\cmd\\git.exe",
-          "C:\\Program Files\\Git\\bin\\git.exe",
+          String.raw`C:\Program Files\Git\cmd\git.exe`,
+          String.raw`C:\Program Files\Git\bin\git.exe`,
         ]
       : ["/usr/bin/git", "/usr/local/bin/git"];
 
