@@ -1,8 +1,11 @@
 import { generateRoomCode } from "./room-code";
 import {
   createDemoExpiry,
+  type FillerEvent,
   type FeedbackSession,
   isExpired,
+  type TimerEvent,
+  type TimerEventType,
 } from "./session-model";
 
 export type CreateSessionInput = Readonly<{
@@ -15,14 +18,50 @@ export type CreateSessionInput = Readonly<{
 export type SessionRepository = Readonly<{
   createSession(input: CreateSessionInput): Promise<FeedbackSession>;
   getSessionByRoomCode(roomCode: string, now?: Date): Promise<FeedbackSession | null>;
+  getSessionSnapshot(roomCode: string, now?: Date): Promise<SessionSnapshot | null>;
+  addTimerEvent(input: AddTimerEventInput): Promise<void>;
+  addFillerEvent(input: AddFillerEventInput): Promise<void>;
   expireSession(roomCode: string, now?: Date): Promise<void>;
   deleteSession(roomCode: string): Promise<void>;
 }>;
 
 const MAX_ROOM_CODE_ATTEMPTS = 8;
+const fillerTypes = ["um", "ah", "like", "so", "other"] as const;
+
+type FillerType = (typeof fillerTypes)[number];
+
+export type AddTimerEventInput = Readonly<{
+  roomCode: string;
+  type: TimerEventType;
+  createdByAlias: string;
+  occurredAt?: Date;
+  adjustmentSeconds?: number;
+}>;
+
+export type AddFillerEventInput = Readonly<{
+  roomCode: string;
+  fillerType: FillerType;
+  createdByAlias: string;
+  occurredAt?: Date;
+}>;
+
+export type SessionSnapshot = Readonly<{
+  session: FeedbackSession;
+  timerEvents: readonly TimerEvent[];
+  fillerEvents: readonly FillerEvent[];
+  elapsedSeconds: number;
+  isTimerRunning: boolean;
+  fillerCounts: Readonly<Record<FillerType, number>>;
+}>;
+
+type SessionRecord = {
+  session: FeedbackSession;
+  timerEvents: TimerEvent[];
+  fillerEvents: FillerEvent[];
+};
 
 export class MemorySessionRepository implements SessionRepository {
-  readonly #sessions = new Map<string, FeedbackSession>();
+  readonly #sessions = new Map<string, SessionRecord>();
 
   createSession({
     speakerAlias,
@@ -40,38 +79,110 @@ export class MemorySessionRepository implements SessionRepository {
       expiresAt: createDemoExpiry(now),
     };
 
-    this.#sessions.set(roomCode, session);
+    this.#sessions.set(roomCode, {
+      session,
+      timerEvents: [],
+      fillerEvents: [],
+    });
 
     return Promise.resolve(session);
   }
 
   getSessionByRoomCode(roomCode: string, now = new Date()) {
-    const session = this.#sessions.get(roomCode);
+    const record = this.#sessions.get(roomCode);
 
-    if (!session) {
+    if (!record) {
       return Promise.resolve(null);
     }
 
-    if (isExpired(now, session.expiresAt)) {
+    if (isExpired(now, record.session.expiresAt)) {
       this.#sessions.delete(roomCode);
       return Promise.resolve(null);
     }
 
-    return Promise.resolve(session);
+    return Promise.resolve(record.session);
+  }
+
+  async getSessionSnapshot(roomCode: string, now = new Date()) {
+    const session = await this.getSessionByRoomCode(roomCode, now);
+
+    if (!session) {
+      return null;
+    }
+
+    const record = this.#sessions.get(roomCode);
+
+    if (!record) {
+      return null;
+    }
+
+    return {
+      session,
+      timerEvents: [...record.timerEvents],
+      fillerEvents: [...record.fillerEvents],
+      elapsedSeconds: calculateElapsedSeconds(record.timerEvents, now),
+      isTimerRunning: isTimerRunning(record.timerEvents),
+      fillerCounts: countFillers(record.fillerEvents),
+    };
+  }
+
+  async addTimerEvent({
+    roomCode,
+    type,
+    createdByAlias,
+    occurredAt = new Date(),
+    adjustmentSeconds,
+  }: AddTimerEventInput) {
+    const record = await this.#getMutableRecord(roomCode, occurredAt);
+
+    if (!record) {
+      return;
+    }
+
+    record.timerEvents.push({
+      type,
+      occurredAt,
+      createdByAlias,
+      adjustmentSeconds,
+    });
+
+    record.session = {
+      ...record.session,
+      status: type === "stop" ? "feedback-discussion" : "speaking",
+    };
+  }
+
+  async addFillerEvent({
+    roomCode,
+    fillerType,
+    createdByAlias,
+    occurredAt = new Date(),
+  }: AddFillerEventInput) {
+    const record = await this.#getMutableRecord(roomCode, occurredAt);
+
+    if (!record) {
+      return;
+    }
+
+    record.fillerEvents.push({
+      fillerType,
+      occurredAt,
+      createdByAlias,
+    });
   }
 
   expireSession(roomCode: string, now = new Date()) {
-    const session = this.#sessions.get(roomCode);
+    const record = this.#sessions.get(roomCode);
 
-    if (!session) {
+    if (!record) {
       return Promise.resolve();
     }
 
-    this.#sessions.set(roomCode, {
-      ...session,
+    record.session = {
+      ...record.session,
       status: "expired",
       expiresAt: now,
-    });
+    };
 
     return Promise.resolve();
   }
@@ -93,6 +204,16 @@ export class MemorySessionRepository implements SessionRepository {
 
     throw new Error("Could not generate a unique room code.");
   }
+
+  async #getMutableRecord(roomCode: string, now: Date) {
+    const session = await this.getSessionByRoomCode(roomCode, now);
+
+    if (!session) {
+      return null;
+    }
+
+    return this.#sessions.get(roomCode) ?? null;
+  }
 }
 
 const globalForSessions = globalThis as typeof globalThis & {
@@ -104,4 +225,51 @@ export function getSessionRepository(): SessionRepository {
     new MemorySessionRepository();
 
   return globalForSessions.cookedBreadExpertSessionRepository;
+}
+
+export function calculateElapsedSeconds(
+  timerEvents: readonly TimerEvent[],
+  now = new Date(),
+) {
+  let elapsedMilliseconds = 0;
+  let activeStart: Date | null = null;
+
+  for (const event of timerEvents) {
+    if (event.type === "start" || event.type === "resume") {
+      activeStart = event.occurredAt;
+    }
+
+    if ((event.type === "pause" || event.type === "stop") && activeStart) {
+      elapsedMilliseconds += event.occurredAt.getTime() - activeStart.getTime();
+      activeStart = null;
+    }
+
+    if (event.type === "adjust") {
+      elapsedMilliseconds += (event.adjustmentSeconds ?? 0) * 1000;
+    }
+  }
+
+  if (activeStart) {
+    elapsedMilliseconds += now.getTime() - activeStart.getTime();
+  }
+
+  return Math.max(0, Math.floor(elapsedMilliseconds / 1000));
+}
+
+export function isTimerRunning(timerEvents: readonly TimerEvent[]) {
+  const lastEvent = timerEvents.at(-1);
+
+  return lastEvent?.type === "start" || lastEvent?.type === "resume";
+}
+
+function countFillers(fillerEvents: readonly FillerEvent[]) {
+  const counts = Object.fromEntries(
+    fillerTypes.map((fillerType) => [fillerType, 0]),
+  ) as Record<FillerType, number>;
+
+  for (const event of fillerEvents) {
+    counts[event.fillerType] += 1;
+  }
+
+  return counts;
 }
