@@ -7,11 +7,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-type SummaryPageProps = {
+type SummaryPageProps = Readonly<{
   params: Promise<{
     roomCode: string;
   }>;
-};
+}>;
 
 export default async function SummaryPage({ params }: SummaryPageProps) {
   const { roomCode } = await params;

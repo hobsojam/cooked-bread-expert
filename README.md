@@ -16,6 +16,7 @@ Default demo behavior:
 - Pseudo-random room codes
 - Short-lived sessions
 - Demo sessions expire after 6 hours
+- Demo sessions are stored in volatile server memory and may disappear sooner
 - Demo warnings and watermarks
 - No search indexing
 - No long-term profiles

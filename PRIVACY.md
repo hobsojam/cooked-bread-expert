@@ -16,6 +16,7 @@ Public demo defaults:
 - No user accounts.
 - No audio or video storage.
 - No long-term speaker or evaluator profiles.
+- Session data is stored in volatile server memory for the demo and may disappear before expiry.
 - No public listing of sessions.
 - No search indexing.
 - Demo warnings and watermarks.

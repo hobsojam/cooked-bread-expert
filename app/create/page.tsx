@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { createDemoSession } from "./actions";
 import { DemoRibbon } from "../components/DemoRibbon";
 import { PrivacyNotice } from "../components/PrivacyNotice";
 import { sampleRoomCode } from "../lib/demo-data";
@@ -17,24 +17,28 @@ export default function CreatePage() {
           <p className="eyebrow">Create a demo session</p>
           <h1>Prepare the room</h1>
           <p className="lede">
-            This mock flow shows the fields a host will set before sharing a
-            room code. Nothing is saved yet.
+            Create a volatile demo room in server memory. It may disappear
+            before the 6-hour expiry if the demo server restarts.
           </p>
           <PrivacyNotice />
         </div>
 
-        <form className="form-panel" aria-label="Create demo session form">
+        <form
+          action={createDemoSession}
+          className="form-panel"
+          aria-label="Create demo session form"
+        >
           <label>
-            Speaker alias
-            <input placeholder="Sample Speaker" />
+            <span>Speaker alias</span>
+            <input name="speakerAlias" placeholder="Sample Speaker" />
           </label>
           <label>
-            Presentation title
-            <input placeholder="A practice talk" />
+            <span>Presentation title</span>
+            <input name="presentationTitle" placeholder="A practice talk" />
           </label>
           <label>
-            Target time
-            <select defaultValue="5-7">
+            <span>Target time</span>
+            <select name="targetTime" defaultValue="5-7">
               <option value="none">No target</option>
               <option value="3-5">3 to 5 minutes</option>
               <option value="5-7">5 to 7 minutes</option>
@@ -42,22 +46,20 @@ export default function CreatePage() {
             </select>
           </label>
           <label className="checkbox-row">
-            <input type="checkbox" defaultChecked />
-            Include Language Confidence & Clarity
+            <input name="includeLanguageConfidence" type="checkbox" defaultChecked />
+            <span>Include Language Confidence & Clarity</span>
           </label>
 
           <div className="mock-result">
             <span className="label">Sample room</span>
             <strong>{sampleRoomCode}</strong>
             <p>
-              In the real flow this button will create a short-lived room and
-              show a private host link.
+              Room codes are generated when you create a demo room. This sample
+              shows the expected format.
             </p>
           </div>
 
-          <Link className="button-link" href={`/session/${sampleRoomCode}`}>
-            Continue to demo room
-          </Link>
+          <button type="submit">Create demo room</button>
         </form>
       </section>
     </main>
