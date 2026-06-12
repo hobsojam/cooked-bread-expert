@@ -1,26 +1,8 @@
+import { feedbackCategories } from "./session-model";
+
 export const sampleRoomCode = "BRIGHT-MAPLE-42";
-
-export const feedbackOptions = [
-  "Not observed",
-  "Needs attention",
-  "Developing",
-  "Effective",
-  "Strong",
-  "Exceptional",
-];
-
-export const categories = [
-  "Message & Purpose",
-  "Structure",
-  "Audience Connection",
-  "Evidence & Examples",
-  "Physical Delivery",
-  "Vocal Delivery",
-  "Presence",
-  "Language & Clarity",
-  "Overall Impact",
-  "Language Confidence & Clarity",
-];
+export const categories = [...feedbackCategories];
+export { feedbackOptions } from "./session-model";
 
 export const summaryHighlights = [
   "The message was easy to follow and centered on one clear idea.",
