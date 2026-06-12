@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+const gitExecutable = findGitExecutable();
+
+const root = execFileSync(gitExecutable, ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
 
 const checkedFiles = execFileSync(
-  "git",
+  gitExecutable,
   ["ls-files", "--cached", "--others", "--exclude-standard"],
   {
     cwd: root,
@@ -103,6 +105,28 @@ const secretLiteralPatterns = [
 
 const allowedSecretLiteralFiles = new Set([".env.example"]);
 const failures = [];
+
+function findGitExecutable() {
+  const candidates =
+    process.platform === "win32"
+      ? [
+          "C:\\Program Files\\Git\\cmd\\git.exe",
+          "C:\\Program Files\\Git\\bin\\git.exe",
+        ]
+      : ["/usr/bin/git", "/usr/local/bin/git"];
+
+  const executable = candidates.find((candidate) => existsSync(candidate));
+
+  if (!executable) {
+    throw new Error(
+      `Could not find Git in the fixed executable locations: ${candidates.join(
+        ", ",
+      )}`,
+    );
+  }
+
+  return executable;
+}
 
 function extensionOf(file) {
   const match = file.match(/(\.[^.\/]+)$/);
