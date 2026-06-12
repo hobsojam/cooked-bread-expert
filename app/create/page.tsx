@@ -47,7 +47,7 @@ export default function CreatePage() {
           </label>
           <label className="checkbox-row">
             <input name="includeLanguageConfidence" type="checkbox" defaultChecked />
-            Include Language Confidence & Clarity
+            <span>Include Language Confidence & Clarity</span>
           </label>
 
           <div className="mock-result">

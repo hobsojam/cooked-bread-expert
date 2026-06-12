@@ -23,10 +23,10 @@ export default function Home() {
           </p>
           <div className="actions" aria-label="Demo actions">
             <Link className="button-link" href="/create">
-              Create demo session
+              <span>Create demo session</span>
             </Link>
             <Link className="button-link secondary" href="/join">
-              Join with room code
+              <span>Join with room code</span>
             </Link>
           </div>
           <PrivacyNotice />
