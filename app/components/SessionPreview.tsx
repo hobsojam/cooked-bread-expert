@@ -1,7 +1,7 @@
-type SessionPreviewProps = {
+type SessionPreviewProps = Readonly<{
   roomCode?: string;
   title?: string;
-};
+}>;
 
 const fillerWords = ["um", "ah", "like", "so", "other"];
 
