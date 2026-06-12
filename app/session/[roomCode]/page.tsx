@@ -3,8 +3,8 @@ import { normalizeRoomCode } from "../../lib/room-code";
 import { DemoRibbon } from "../../components/DemoRibbon";
 import { FeedbackModel } from "../../components/FeedbackModel";
 import { PrivacyNotice } from "../../components/PrivacyNotice";
-import { SessionPreview } from "../../components/SessionPreview";
 import { getSessionRepository } from "../../lib/session-repository";
+import { recordFillerEvent, recordTimerEvent } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -19,7 +19,10 @@ type SessionPageProps = Readonly<{
 export default async function SessionPage({ params }: SessionPageProps) {
   const { roomCode } = await params;
   const decodedRoomCode = normalizeRoomCode(decodeURIComponent(roomCode));
-  const session = await getSessionRepository().getSessionByRoomCode(decodedRoomCode);
+  const snapshot =
+    await getSessionRepository().getSessionSnapshot(decodedRoomCode);
+  const session = snapshot?.session ?? null;
+  const hasTimerEvents = Boolean(snapshot?.timerEvents.length);
 
   return (
     <main className="page-shell compact-shell">
@@ -39,7 +42,52 @@ export default async function SessionPage({ params }: SessionPageProps) {
         </div>
 
         <aside className="room-side">
-          <SessionPreview roomCode={decodedRoomCode} />
+          <div className="session-panel" aria-label="Demo session controls">
+            <div className="panel-header">
+              <div>
+                <span className="label">Room</span>
+                <strong>{decodedRoomCode}</strong>
+              </div>
+              <span className="status">Demo</span>
+            </div>
+
+            <div className="timer">
+              <span>Shared timer</span>
+              <strong>{formatElapsed(snapshot?.elapsedSeconds ?? 0)}</strong>
+              <div className="timer-actions">
+                <EventButton
+                  disabled={!session || snapshot?.isTimerRunning}
+                  label={hasTimerEvents ? "Resume" : "Start"}
+                  roomCode={decodedRoomCode}
+                  type={hasTimerEvents ? "resume" : "start"}
+                />
+                <EventButton
+                  disabled={!session || !snapshot?.isTimerRunning}
+                  label="Pause"
+                  roomCode={decodedRoomCode}
+                  type="pause"
+                />
+                <EventButton
+                  disabled={!session}
+                  label="Stop"
+                  roomCode={decodedRoomCode}
+                  type="stop"
+                />
+              </div>
+            </div>
+
+            <div className="filler-row" aria-label="Filler word controls">
+              {(["um", "ah", "like", "so", "other"] as const).map((word) => (
+                <form action={recordFillerEvent} key={word}>
+                  <input name="roomCode" type="hidden" value={decodedRoomCode} />
+                  <input name="fillerType" type="hidden" value={word} />
+                  <button disabled={!session} type="submit">
+                    + {word} ({snapshot?.fillerCounts[word] ?? 0})
+                  </button>
+                </form>
+              ))}
+            </div>
+          </div>
           <div className="form-panel">
             <h2>Summary release</h2>
             <p>
@@ -54,4 +102,32 @@ export default async function SessionPage({ params }: SessionPageProps) {
       </section>
     </main>
   );
+}
+
+type EventButtonProps = Readonly<{
+  disabled?: boolean;
+  label: string;
+  roomCode: string;
+  type: "start" | "pause" | "resume" | "stop";
+}>;
+
+function EventButton({ disabled, label, roomCode, type }: EventButtonProps) {
+  return (
+    <form action={recordTimerEvent}>
+      <input name="roomCode" type="hidden" value={roomCode} />
+      <input name="type" type="hidden" value={type} />
+      <button disabled={disabled} type="submit">
+        {label}
+      </button>
+    </form>
+  );
+}
+
+function formatElapsed(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+
+  return `${minutes}:${seconds}`;
 }
