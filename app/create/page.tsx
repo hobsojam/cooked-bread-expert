@@ -29,15 +29,15 @@ export default function CreatePage() {
           aria-label="Create demo session form"
         >
           <label>
-            Speaker alias
+            <span>Speaker alias</span>
             <input name="speakerAlias" placeholder="Sample Speaker" />
           </label>
           <label>
-            Presentation title
+            <span>Presentation title</span>
             <input name="presentationTitle" placeholder="A practice talk" />
           </label>
           <label>
-            Target time
+            <span>Target time</span>
             <select name="targetTime" defaultValue="5-7">
               <option value="none">No target</option>
               <option value="3-5">3 to 5 minutes</option>

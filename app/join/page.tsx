@@ -29,11 +29,11 @@ export default function JoinPage() {
           aria-label="Join demo session form"
         >
           <label>
-            Your alias
+            <span>Your alias</span>
             <input name="participantAlias" placeholder="Sample Evaluator" />
           </label>
           <label>
-            Room code
+            <span>Room code</span>
             <input name="roomCode" defaultValue={sampleRoomCode} />
           </label>
           <p className="field-help">
