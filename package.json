@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "check": "node scripts/check-repo-hygiene.mjs",
-    "test": "npm run check",
+    "test": "npm run check && vitest run",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
@@ -21,7 +21,8 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^4.1.8"
   },
   "overrides": {
     "postcss": "^8.5.10"
