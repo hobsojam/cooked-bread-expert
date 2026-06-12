@@ -77,9 +77,29 @@ The docs cover two deployment directions:
 
 The public demo path is for evaluating the software only. Real use requires the operator to consider data protection, lawful basis, privacy notices, retention, access, and deletion.
 
-## Development Status
+## Local Development
 
-Foundation docs only. Application code has not been implemented yet.
+Install dependencies:
+
+```sh
+npm install
+```
+
+Run the local development server:
+
+```sh
+npm run dev
+```
+
+Run verification:
+
+```sh
+npm run check
+npm test
+npm run build
+```
+
+The first application slice is a demo-only app shell. It does not create sessions, persist feedback, or generate summaries yet.
 
 ## License
 

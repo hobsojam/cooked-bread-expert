@@ -2,17 +2,29 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+const gitExecutable = findGitExecutable();
+
+const root = execFileSync(gitExecutable, ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
 
-const trackedFiles = execFileSync("git", ["ls-files"], {
-  cwd: root,
-  encoding: "utf8",
-})
+const checkedFiles = execFileSync(
+  gitExecutable,
+  ["ls-files", "--cached", "--others", "--exclude-standard"],
+  {
+    cwd: root,
+    encoding: "utf8",
+  },
+)
   .split(/\r?\n/)
   .filter(Boolean)
+  .filter((file, index, files) => files.indexOf(file) === index)
   .filter((file) => !file.startsWith(".git/"));
+
+if (checkedFiles.length === 0) {
+  console.log("Repo hygiene check skipped because there are no files to check.");
+  process.exit(0);
+}
 
 const textExtensions = new Set([
   ".cjs",
@@ -94,6 +106,28 @@ const secretLiteralPatterns = [
 const allowedSecretLiteralFiles = new Set([".env.example"]);
 const failures = [];
 
+function findGitExecutable() {
+  const candidates =
+    process.platform === "win32"
+      ? [
+          String.raw`C:\Program Files\Git\cmd\git.exe`,
+          String.raw`C:\Program Files\Git\bin\git.exe`,
+        ]
+      : ["/usr/bin/git", "/usr/local/bin/git"];
+
+  const executable = candidates.find((candidate) => existsSync(candidate));
+
+  if (!executable) {
+    throw new Error(
+      `Could not find Git in the fixed executable locations: ${candidates.join(
+        ", ",
+      )}`,
+    );
+  }
+
+  return executable;
+}
+
 function extensionOf(file) {
   const match = file.match(/(\.[^.\/]+)$/);
   return match ? match[1].toLowerCase() : "";
@@ -108,7 +142,7 @@ function addFailure(file, lineNumber, reason, excerpt) {
   failures.push(`${location} - ${reason}${excerpt ? `: ${excerpt.trim()}` : ""}`);
 }
 
-for (const file of trackedFiles) {
+for (const file of checkedFiles) {
   const absolutePath = join(root, file);
 
   if (!existsSync(absolutePath) || statSync(absolutePath).isDirectory()) {
@@ -159,5 +193,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Repo hygiene check passed for ${trackedFiles.length} tracked files.`);
+console.log(`Repo hygiene check passed for ${checkedFiles.length} files.`);
 console.log(`Root: ${relative(process.cwd(), root) || "."}`);
