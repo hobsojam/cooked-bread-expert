@@ -6,6 +6,24 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "check": "node scripts/check-repo-hygiene.mjs"
+    "check": "node scripts/check-repo-hygiene.mjs",
+    "test": "npm run check",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }

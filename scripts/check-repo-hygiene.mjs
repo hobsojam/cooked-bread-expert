@@ -6,13 +6,23 @@ const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
 
-const trackedFiles = execFileSync("git", ["ls-files"], {
-  cwd: root,
-  encoding: "utf8",
-})
+const checkedFiles = execFileSync(
+  "git",
+  ["ls-files", "--cached", "--others", "--exclude-standard"],
+  {
+    cwd: root,
+    encoding: "utf8",
+  },
+)
   .split(/\r?\n/)
   .filter(Boolean)
+  .filter((file, index, files) => files.indexOf(file) === index)
   .filter((file) => !file.startsWith(".git/"));
+
+if (checkedFiles.length === 0) {
+  console.log("Repo hygiene check skipped because there are no files to check.");
+  process.exit(0);
+}
 
 const textExtensions = new Set([
   ".cjs",
@@ -108,7 +118,7 @@ function addFailure(file, lineNumber, reason, excerpt) {
   failures.push(`${location} - ${reason}${excerpt ? `: ${excerpt.trim()}` : ""}`);
 }
 
-for (const file of trackedFiles) {
+for (const file of checkedFiles) {
   const absolutePath = join(root, file);
 
   if (!existsSync(absolutePath) || statSync(absolutePath).isDirectory()) {
@@ -159,5 +169,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Repo hygiene check passed for ${trackedFiles.length} tracked files.`);
+console.log(`Repo hygiene check passed for ${checkedFiles.length} files.`);
 console.log(`Root: ${relative(process.cwd(), root) || "."}`);

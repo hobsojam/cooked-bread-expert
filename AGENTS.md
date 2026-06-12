@@ -8,26 +8,37 @@ The MVP (minimum viable product) is demo-first and self-hostable. Treat privacy 
 
 ## Current Scope
 
-Start small. The initial scope is foundation documentation only unless the user explicitly asks for app implementation.
+Start small. The current implementation scope is a demo-only app shell unless the user explicitly asks for session persistence or full feedback workflows.
 
 ## Setup
 
-No application stack has been implemented yet.
+The app uses Next.js, React, and TypeScript.
 
-When app code is added, document the exact setup commands in `README.md` before relying on them here. Do not invent package-manager, database, or framework commands that do not exist in the repository.
+Use the commands documented in `README.md`. Do not invent package-manager, database, or framework commands that do not exist in the repository.
 
-Expected future setup direction:
+Current setup:
 
 - Copy `.env.example` to `.env`.
 - Configure local-only secrets in `.env`.
-- Install dependencies with the package manager selected by the repo.
-- Run database migrations once a database layer exists.
+- Install dependencies with `npm install`.
+
+No database layer exists yet.
 
 ## Build
 
-No build command exists yet.
+Build command:
 
-When app code is added, document the exact build and verification commands in `README.md`. Until then, docs-only changes should be verified by reading the changed files and checking terminology, retention, and privacy constraints.
+```sh
+npm run build
+```
+
+General verification:
+
+```sh
+npm run check
+npm test
+npm run build
+```
 
 ## Terminology Constraint
 

@@ -39,13 +39,18 @@ For real use, set `DEMO_MODE=false` and choose a deliberate `SESSION_RETENTION_H
 
 Local development should use fake data only.
 
-When application code exists, local setup should include:
+Local setup:
 
 1. Install dependencies.
 2. Copy `.env.example` to `.env`.
-3. Set a local database connection.
-4. Run migrations.
-5. Start the development server.
+3. Start the development server.
+
+```sh
+npm install
+npm run dev
+```
+
+No database or migration layer exists yet.
 
 ## Vercel Demo Path
 
