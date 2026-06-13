@@ -359,6 +359,29 @@ h2 {
   padding: 0.75rem;
 }
 
+.comment-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.comment-list figure {
+  background: #f1f4ed;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 0;
+  padding: 0.9rem;
+}
+
+.comment-list blockquote {
+  margin: 0 0 0.6rem;
+}
+
+.comment-list figcaption {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .summary-watermark {
   position: relative;
 }

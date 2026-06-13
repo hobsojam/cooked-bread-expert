@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { normalizeRoomCode } from "../../lib/room-code";
 import { DemoRibbon } from "../../components/DemoRibbon";
 import { PrivacyNotice } from "../../components/PrivacyNotice";
-import { sampleRoomCode, summaryHighlights } from "../../lib/demo-data";
+import { getSessionRepository } from "../../lib/session-repository";
+import {
+  buildCategorySummaryViews,
+  formatElapsed,
+} from "../../lib/summary-view";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,7 +20,12 @@ type SummaryPageProps = Readonly<{
 
 export default async function SummaryPage({ params }: SummaryPageProps) {
   const { roomCode } = await params;
-  const decodedRoomCode = decodeURIComponent(roomCode || sampleRoomCode);
+  const decodedRoomCode = normalizeRoomCode(decodeURIComponent(roomCode));
+  const snapshot =
+    await getSessionRepository().getSessionSnapshot(decodedRoomCode);
+  const categorySummaries = snapshot
+    ? buildCategorySummaryViews(snapshot)
+    : [];
 
   return (
     <main className="page-shell compact-shell summary-watermark">
@@ -26,7 +36,9 @@ export default async function SummaryPage({ params }: SummaryPageProps) {
           <p className="eyebrow">Released demo summary</p>
           <h1>{decodedRoomCode}</h1>
           <p className="lede">
-            Demo report. Not for real feedback sessions or personal data.
+            {snapshot
+              ? `Demo report for ${snapshot.session.speakerAlias}. Not for real feedback sessions or personal data.`
+              : "This demo session was not found or has expired."}
           </p>
           <PrivacyNotice />
         </div>
@@ -37,29 +49,66 @@ export default async function SummaryPage({ params }: SummaryPageProps) {
 
       <section className="summary-grid">
         <div className="form-panel">
-          <h2>Overall themes</h2>
-          <ul className="summary-list">
-            {summaryHighlights.map((highlight) => (
-              <li key={highlight}>{highlight}</li>
-            ))}
-          </ul>
+          <h2>Session observations</h2>
+          <div className="distribution-list">
+            <span>Elapsed time: {formatElapsed(snapshot?.elapsedSeconds ?? 0)}</span>
+            <span>
+              Filler words:{" "}
+              {snapshot
+                ? Object.entries(snapshot.fillerCounts)
+                    .map(([word, count]) => `${word}: ${count}`)
+                    .join(", ")
+                : "No session data"}
+            </span>
+            <span>
+              Feedback givers: {snapshot?.feedbackSummary.evaluatorCount ?? 0}
+            </span>
+          </div>
         </div>
 
         <div className="form-panel">
-          <h2>Most useful next step</h2>
+          <h2>Feedback coverage</h2>
           <p>
-            Choose one improvement area and practice it in the next session
-            rather than treating every comment as equally urgent.
+            Quality observations:{" "}
+            {snapshot?.feedbackSummary.qualityResponseCount ?? 0}. Not
+            observed: {snapshot?.feedbackSummary.notObservedCount ?? 0}.
           </p>
         </div>
 
         <div className="form-panel">
-          <h2>Observed patterns</h2>
-          <div className="distribution-list">
-            <span>Vocal Delivery: Strong, Effective, Effective</span>
-            <span>Structure: Effective, Effective, Developing</span>
-            <span>Language Confidence & Clarity: Not observed, Effective</span>
-          </div>
+          <h2>Category distributions</h2>
+          {categorySummaries.length > 0 ? (
+            <div className="distribution-list">
+              {categorySummaries.map((summary) => (
+                <span key={summary.category}>
+                  {summary.category}: {summary.distribution}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p>No structured feedback has been submitted yet.</p>
+          )}
+        </div>
+
+        <div className="form-panel">
+          <h2>Comments</h2>
+          {categorySummaries.some((summary) => summary.comments.length > 0) ? (
+            <div className="comment-list">
+              {categorySummaries.flatMap((summary) =>
+                summary.comments.map((comment) => (
+                  <figure key={`${summary.category}-${comment.evaluatorAlias}-${comment.comment}`}>
+                    <blockquote>{comment.comment}</blockquote>
+                    <figcaption>
+                      {summary.category} - {comment.option} -{" "}
+                      {comment.evaluatorAlias}
+                    </figcaption>
+                  </figure>
+                )),
+              )}
+            </div>
+          ) : (
+            <p>No written comments have been submitted yet.</p>
+          )}
         </div>
 
         <div className="form-panel demo-export">
