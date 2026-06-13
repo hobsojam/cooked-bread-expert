@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type {
-  FillerType,
-  LiveSessionSnapshotView,
-} from "../lib/live-session-view";
+import type { LiveSessionSnapshotView } from "../lib/live-session-view";
 import { usePollingSnapshot } from "./usePollingSnapshot";
 import {
   recordFillerEvent,
