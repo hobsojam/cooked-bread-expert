@@ -4,7 +4,12 @@ import { DemoRibbon } from "../../components/DemoRibbon";
 import { FeedbackModel } from "../../components/FeedbackModel";
 import { PrivacyNotice } from "../../components/PrivacyNotice";
 import { getSessionRepository } from "../../lib/session-repository";
-import { recordFillerEvent, recordTimerEvent } from "./actions";
+import { feedbackCategories, feedbackOptions } from "../../lib/session-model";
+import {
+  recordFillerEvent,
+  recordTimerEvent,
+  submitSessionFeedback,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -38,7 +43,44 @@ export default async function SessionPage({ params }: SessionPageProps) {
               : "This demo room was not found or has expired. You can still inspect the page shape with the room code."}
           </p>
           <PrivacyNotice />
-          <FeedbackModel />
+          {session ? (
+            <form
+              action={submitSessionFeedback}
+              className="form-panel feedback-form"
+              aria-label="Submit structured feedback"
+            >
+              <input name="roomCode" type="hidden" value={decodedRoomCode} />
+              <h2>Structured feedback</h2>
+              <label>
+                <span>Your alias</span>
+                <input name="evaluatorAlias" placeholder="Demo evaluator" />
+              </label>
+              {feedbackCategories.map((category, index) => (
+                <div className="feedback-item" key={category}>
+                  <label>
+                    <span>{category}</span>
+                    <select name={`option-${index}`} defaultValue="Not observed">
+                      {feedbackOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Optional note</span>
+                    <textarea
+                      name={`comment-${index}`}
+                      placeholder="Focus on observable communication behavior."
+                    />
+                  </label>
+                </div>
+              ))}
+              <button type="submit">Submit demo feedback</button>
+            </form>
+          ) : (
+            <FeedbackModel />
+          )}
         </div>
 
         <aside className="room-side">
@@ -94,6 +136,18 @@ export default async function SessionPage({ params }: SessionPageProps) {
               The host releases the written summary after verbal feedback so the
               page supports the conversation instead of replacing it.
             </p>
+            <div className="distribution-list">
+              <span>
+                Feedback givers: {snapshot?.feedbackSummary.evaluatorCount ?? 0}
+              </span>
+              <span>
+                Quality observations:{" "}
+                {snapshot?.feedbackSummary.qualityResponseCount ?? 0}
+              </span>
+              <span>
+                Not observed: {snapshot?.feedbackSummary.notObservedCount ?? 0}
+              </span>
+            </div>
             <Link className="button-link" href={`/summary/${decodedRoomCode}`}>
               Preview released summary
             </Link>

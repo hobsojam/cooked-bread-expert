@@ -279,12 +279,18 @@ h2 {
 }
 
 .form-panel input,
-.form-panel select {
+.form-panel select,
+.form-panel textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--foreground);
   font: inherit;
   padding: 0.8rem;
+}
+
+.form-panel textarea {
+  min-height: 5rem;
+  resize: vertical;
 }
 
 .checkbox-row {
@@ -333,6 +339,17 @@ h2 {
 .distribution-list {
   display: grid;
   gap: 0.65rem;
+}
+
+.feedback-form {
+  margin-top: 1.5rem;
+}
+
+.feedback-item {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.8rem;
+  padding-top: 1rem;
 }
 
 .distribution-list span {

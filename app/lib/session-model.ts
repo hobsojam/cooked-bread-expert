@@ -64,6 +64,12 @@ export type FeedbackResponse = Readonly<{
   comment?: string;
 }>;
 
+export type EvaluatorFeedback = Readonly<{
+  evaluatorAlias: string;
+  submittedAt: Date;
+  responses: readonly FeedbackResponse[];
+}>;
+
 export type FeedbackSession = Readonly<{
   roomCode: string;
   status: SessionStatus;

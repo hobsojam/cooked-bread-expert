@@ -1,9 +1,15 @@
 import { generateRoomCode } from "./room-code";
 import {
   createDemoExpiry,
+  type EvaluatorFeedback,
   type FillerEvent,
+  type FeedbackCategory,
+  type FeedbackOption,
+  feedbackCategories,
+  feedbackOptions,
   type FeedbackSession,
   isExpired,
+  isQualityFeedbackOption,
   type TimerEvent,
   type TimerEventType,
 } from "./session-model";
@@ -21,6 +27,7 @@ export type SessionRepository = Readonly<{
   getSessionSnapshot(roomCode: string, now?: Date): Promise<SessionSnapshot | null>;
   addTimerEvent(input: AddTimerEventInput): Promise<void>;
   addFillerEvent(input: AddFillerEventInput): Promise<void>;
+  submitFeedback(input: SubmitFeedbackInput): Promise<void>;
   expireSession(roomCode: string, now?: Date): Promise<void>;
   deleteSession(roomCode: string): Promise<void>;
 }>;
@@ -49,15 +56,53 @@ export type SessionSnapshot = Readonly<{
   session: FeedbackSession;
   timerEvents: readonly TimerEvent[];
   fillerEvents: readonly FillerEvent[];
+  feedback: readonly EvaluatorFeedback[];
+  feedbackSummary: FeedbackSummary;
   elapsedSeconds: number;
   isTimerRunning: boolean;
   fillerCounts: Readonly<Record<FillerType, number>>;
+}>;
+
+export type SubmitFeedbackInput = Readonly<{
+  roomCode: string;
+  evaluatorAlias: string;
+  responses: readonly SubmitFeedbackResponseInput[];
+  submittedAt?: Date;
+}>;
+
+export type SubmitFeedbackResponseInput = Readonly<{
+  category: FeedbackCategory;
+  option: FeedbackOption;
+  comment?: string;
+}>;
+
+export type FeedbackSummary = Readonly<{
+  evaluatorCount: number;
+  responseCount: number;
+  qualityResponseCount: number;
+  notObservedCount: number;
+  byCategory: Readonly<Record<FeedbackCategory, CategoryFeedbackSummary>>;
+}>;
+
+export type CategoryFeedbackSummary = Readonly<{
+  responseCount: number;
+  qualityResponseCount: number;
+  notObservedCount: number;
+  options: Readonly<Record<FeedbackOption, number>>;
 }>;
 
 type SessionRecord = {
   session: FeedbackSession;
   timerEvents: TimerEvent[];
   fillerEvents: FillerEvent[];
+  feedback: EvaluatorFeedback[];
+};
+
+type MutableCategoryFeedbackSummary = {
+  responseCount: number;
+  qualityResponseCount: number;
+  notObservedCount: number;
+  options: Record<FeedbackOption, number>;
 };
 
 export class MemorySessionRepository implements SessionRepository {
@@ -83,6 +128,7 @@ export class MemorySessionRepository implements SessionRepository {
       session,
       timerEvents: [],
       fillerEvents: [],
+      feedback: [],
     });
 
     return Promise.resolve(session);
@@ -120,6 +166,8 @@ export class MemorySessionRepository implements SessionRepository {
       session,
       timerEvents: [...record.timerEvents],
       fillerEvents: [...record.fillerEvents],
+      feedback: [...record.feedback],
+      feedbackSummary: summarizeFeedback(record.feedback),
       elapsedSeconds: calculateElapsedSeconds(record.timerEvents, now),
       isTimerRunning: isTimerRunning(record.timerEvents),
       fillerCounts: countFillers(record.fillerEvents),
@@ -168,6 +216,29 @@ export class MemorySessionRepository implements SessionRepository {
       fillerType,
       occurredAt,
       createdByAlias,
+    });
+  }
+
+  async submitFeedback({
+    roomCode,
+    evaluatorAlias,
+    responses,
+    submittedAt = new Date(),
+  }: SubmitFeedbackInput) {
+    const record = await this.#getMutableRecord(roomCode, submittedAt);
+
+    if (!record) {
+      return;
+    }
+
+    record.feedback.push({
+      evaluatorAlias,
+      submittedAt,
+      responses: responses.map((response) => ({
+        category: response.category,
+        option: response.option,
+        comment: response.comment || undefined,
+      })),
     });
   }
 
@@ -272,4 +343,48 @@ function countFillers(fillerEvents: readonly FillerEvent[]) {
   }
 
   return counts;
+}
+
+export function summarizeFeedback(feedback: readonly EvaluatorFeedback[]) {
+  const byCategory = Object.fromEntries(
+    feedbackCategories.map((category) => [
+      category,
+      {
+        responseCount: 0,
+        qualityResponseCount: 0,
+        notObservedCount: 0,
+        options: Object.fromEntries(
+          feedbackOptions.map((option) => [option, 0]),
+        ) as Record<FeedbackOption, number>,
+      },
+    ]),
+  ) as Record<FeedbackCategory, MutableCategoryFeedbackSummary>;
+
+  let responseCount = 0;
+  let qualityResponseCount = 0;
+  let notObservedCount = 0;
+
+  for (const evaluatorFeedback of feedback) {
+    for (const response of evaluatorFeedback.responses) {
+      responseCount += 1;
+      byCategory[response.category].responseCount += 1;
+      byCategory[response.category].options[response.option] += 1;
+
+      if (isQualityFeedbackOption(response.option)) {
+        qualityResponseCount += 1;
+        byCategory[response.category].qualityResponseCount += 1;
+      } else {
+        notObservedCount += 1;
+        byCategory[response.category].notObservedCount += 1;
+      }
+    }
+  }
+
+  return {
+    evaluatorCount: feedback.length,
+    responseCount,
+    qualityResponseCount,
+    notObservedCount,
+    byCategory,
+  };
 }

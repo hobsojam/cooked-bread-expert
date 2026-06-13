@@ -3,7 +3,13 @@
 import { redirect } from "next/navigation";
 import { normalizeRoomCode } from "../../lib/room-code";
 import { getSessionRepository } from "../../lib/session-repository";
-import type { TimerEventType } from "../../lib/session-model";
+import {
+  feedbackCategories,
+  feedbackOptions,
+  type FeedbackCategory,
+  type FeedbackOption,
+  type TimerEventType,
+} from "../../lib/session-model";
 
 const timerEventTypes = new Set<TimerEventType>([
   "start",
@@ -37,6 +43,35 @@ export async function recordFillerEvent(formData: FormData) {
       roomCode,
       fillerType: fillerType as "um" | "ah" | "like" | "so" | "other",
       createdByAlias: "Demo evaluator",
+    });
+  }
+
+  redirect(`/session/${roomCode}`);
+}
+
+export async function submitSessionFeedback(formData: FormData) {
+  const roomCode = normalizeRoomCode(readTextField(formData, "roomCode"));
+  const evaluatorAlias =
+    readTextField(formData, "evaluatorAlias") || "Demo evaluator";
+
+  const responses = feedbackCategories.map((category, index) => {
+    const option = readTextField(formData, `option-${index}`);
+    const comment = readTextField(formData, `comment-${index}`);
+
+    return {
+      category,
+      option: feedbackOptions.includes(option as FeedbackOption)
+        ? (option as FeedbackOption)
+        : "Not observed",
+      comment,
+    };
+  });
+
+  if (roomCode) {
+    await getSessionRepository().submitFeedback({
+      roomCode,
+      evaluatorAlias,
+      responses,
     });
   }
 
