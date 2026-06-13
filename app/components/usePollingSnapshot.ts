@@ -43,13 +43,13 @@ export function usePollingSnapshot<TSnapshot>(
       }
     }
 
-    const interval = window.setInterval(refresh, 2_000);
+    const interval = globalThis.setInterval(refresh, 2_000);
     void refresh();
 
     return () => {
       isMounted = false;
       controller.abort();
-      window.clearInterval(interval);
+      globalThis.clearInterval(interval);
     };
   }, [apiPath]);
 
