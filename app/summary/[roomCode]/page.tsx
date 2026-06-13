@@ -56,8 +56,9 @@ export default async function SummaryPage({ params }: SummaryPageProps) {
               Filler words:{" "}
               {snapshot
                 ? Object.entries(snapshot.fillerCounts)
+                    .filter(([, count]) => count > 0)
                     .map(([word, count]) => `${word}: ${count}`)
-                    .join(", ")
+                    .join(", ") || "None recorded"
                 : "No session data"}
             </span>
             <span>
@@ -95,8 +96,8 @@ export default async function SummaryPage({ params }: SummaryPageProps) {
           {categorySummaries.some((summary) => summary.comments.length > 0) ? (
             <div className="comment-list">
               {categorySummaries.flatMap((summary) =>
-                summary.comments.map((comment) => (
-                  <figure key={`${summary.category}-${comment.evaluatorAlias}-${comment.comment}`}>
+                summary.comments.map((comment, i) => (
+                  <figure key={`${summary.category}-${i}`}>
                     <blockquote>{comment.comment}</blockquote>
                     <figcaption>
                       {summary.category} - {comment.option} -{" "}
