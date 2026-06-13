@@ -155,4 +155,114 @@ describe("MemorySessionRepository", () => {
       ),
     ).resolves.toBeNull();
   });
+
+  it("stores feedback from multiple evaluators", async () => {
+    const repository = new MemorySessionRepository();
+    const session = await repository.createSession({
+      speakerAlias: "Sample Speaker",
+      now: new Date("2026-06-12T08:00:00.000Z"),
+      roomCodeGenerator: () => "BRIGHT-MAPLE-42",
+    });
+
+    await repository.submitFeedback({
+      roomCode: session.roomCode,
+      evaluatorAlias: "Evaluator One",
+      responses: [
+        {
+          category: "Structure",
+          option: "Effective",
+          comment: "Clear beginning and close.",
+        },
+      ],
+      submittedAt: new Date("2026-06-12T08:10:00.000Z"),
+    });
+    await repository.submitFeedback({
+      roomCode: session.roomCode,
+      evaluatorAlias: "Evaluator Two",
+      responses: [
+        {
+          category: "Structure",
+          option: "Strong",
+        },
+      ],
+      submittedAt: new Date("2026-06-12T08:11:00.000Z"),
+    });
+
+    const snapshot = await repository.getSessionSnapshot(
+      session.roomCode,
+      new Date("2026-06-12T08:12:00.000Z"),
+    );
+
+    expect(snapshot?.feedback).toHaveLength(2);
+    expect(snapshot?.feedbackSummary.evaluatorCount).toBe(2);
+    expect(snapshot?.feedbackSummary.byCategory.Structure.options.Effective).toBe(
+      1,
+    );
+    expect(snapshot?.feedbackSummary.byCategory.Structure.options.Strong).toBe(1);
+  });
+
+  it("summarizes not observed separately from quality feedback", async () => {
+    const repository = new MemorySessionRepository();
+    const session = await repository.createSession({
+      speakerAlias: "Sample Speaker",
+      now: new Date("2026-06-12T08:00:00.000Z"),
+      roomCodeGenerator: () => "BRIGHT-MAPLE-42",
+    });
+
+    await repository.submitFeedback({
+      roomCode: session.roomCode,
+      evaluatorAlias: "Evaluator One",
+      responses: [
+        {
+          category: "Vocal Delivery",
+          option: "Not observed",
+        },
+        {
+          category: "Structure",
+          option: "Developing",
+        },
+      ],
+      submittedAt: new Date("2026-06-12T08:10:00.000Z"),
+    });
+
+    const snapshot = await repository.getSessionSnapshot(
+      session.roomCode,
+      new Date("2026-06-12T08:11:00.000Z"),
+    );
+
+    expect(snapshot?.feedbackSummary.responseCount).toBe(2);
+    expect(snapshot?.feedbackSummary.qualityResponseCount).toBe(1);
+    expect(snapshot?.feedbackSummary.notObservedCount).toBe(1);
+    expect(
+      snapshot?.feedbackSummary.byCategory["Vocal Delivery"].notObservedCount,
+    ).toBe(1);
+  });
+
+  it("does not submit feedback to expired sessions", async () => {
+    const repository = new MemorySessionRepository();
+    const session = await repository.createSession({
+      speakerAlias: "Sample Speaker",
+      now: new Date("2026-06-12T08:00:00.000Z"),
+      roomCodeGenerator: () => "BRIGHT-MAPLE-42",
+    });
+
+    await repository.submitFeedback({
+      roomCode: session.roomCode,
+      evaluatorAlias: "Evaluator One",
+      responses: [
+        {
+          category: "Structure",
+          option: "Effective",
+        },
+      ],
+      submittedAt: new Date("2026-06-12T14:00:00.000Z"),
+    });
+
+    await expect(
+      repository.getSessionSnapshot(
+        session.roomCode,
+        new Date("2026-06-12T14:00:00.000Z"),
+      ),
+    ).resolves.toBeNull();
+  });
 });
