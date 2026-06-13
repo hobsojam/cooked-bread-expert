@@ -204,6 +204,13 @@ h2 {
   line-height: 1;
 }
 
+.live-refresh-note {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
 .timer-actions,
 .filler-row {
   display: flex;
