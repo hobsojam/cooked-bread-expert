@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import type {
   FillerType,
   LiveSessionSnapshotView,
 } from "../lib/live-session-view";
+import { usePollingSnapshot } from "./usePollingSnapshot";
 import {
   recordFillerEvent,
   recordTimerEvent,
@@ -22,7 +22,10 @@ export function LiveSessionPanel({
   initialSnapshot,
   roomCode,
 }: LiveSessionPanelProps) {
-  const snapshot = useLiveSnapshot("/api/session", roomCode, initialSnapshot);
+  const snapshot = usePollingSnapshot<LiveSessionSnapshotView>(
+    `/api/session/${encodeURIComponent(roomCode)}`,
+    initialSnapshot,
+  );
   const hasSession = Boolean(snapshot);
   const hasTimerEvents = Boolean(snapshot?.hasTimerEvents);
 
@@ -124,62 +127,4 @@ function EventButton({ disabled, label, roomCode, type }: EventButtonProps) {
       </button>
     </form>
   );
-}
-
-function useLiveSnapshot(
-  apiBasePath: string,
-  roomCode: string,
-  initialSnapshot: LiveSessionSnapshotView | null,
-) {
-  const [snapshot, setSnapshot] = useState(initialSnapshot);
-
-  useEffect(() => {
-    let isMounted = true;
-    const controller = new AbortController();
-
-    async function refresh() {
-      try {
-        const response = await fetch(
-          `${apiBasePath}/${encodeURIComponent(roomCode)}`,
-          {
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (response.status === 404) {
-          setSnapshot(null);
-          return;
-        }
-
-        if (!response.ok) {
-          return;
-        }
-
-        const payload = (await response.json()) as {
-          snapshot: LiveSessionSnapshotView | null;
-        };
-        setSnapshot(payload.snapshot);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          return;
-        }
-      }
-    }
-
-    const interval = window.setInterval(refresh, 2_000);
-    void refresh();
-
-    return () => {
-      isMounted = false;
-      controller.abort();
-      window.clearInterval(interval);
-    };
-  }, [apiBasePath, roomCode]);
-
-  return snapshot;
 }

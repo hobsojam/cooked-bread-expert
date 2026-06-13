@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { LiveSummarySnapshotView } from "../lib/live-session-view";
+import { usePollingSnapshot } from "./usePollingSnapshot";
 
 type LiveSummaryReportProps = Readonly<{
   initialSnapshot: LiveSummarySnapshotView | null;
@@ -12,7 +12,10 @@ export function LiveSummaryReport({
   initialSnapshot,
   roomCode,
 }: LiveSummaryReportProps) {
-  const snapshot = useLiveSummarySnapshot(roomCode, initialSnapshot);
+  const snapshot = usePollingSnapshot<LiveSummarySnapshotView>(
+    `/api/summary/${encodeURIComponent(roomCode)}`,
+    initialSnapshot,
+  );
   const categorySummaries = snapshot?.categorySummaries ?? [];
 
   return (
@@ -88,61 +91,4 @@ export function LiveSummaryReport({
       </div>
     </section>
   );
-}
-
-function useLiveSummarySnapshot(
-  roomCode: string,
-  initialSnapshot: LiveSummarySnapshotView | null,
-) {
-  const [snapshot, setSnapshot] = useState(initialSnapshot);
-
-  useEffect(() => {
-    let isMounted = true;
-    const controller = new AbortController();
-
-    async function refresh() {
-      try {
-        const response = await fetch(
-          `/api/summary/${encodeURIComponent(roomCode)}`,
-          {
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (response.status === 404) {
-          setSnapshot(null);
-          return;
-        }
-
-        if (!response.ok) {
-          return;
-        }
-
-        const payload = (await response.json()) as {
-          snapshot: LiveSummarySnapshotView | null;
-        };
-        setSnapshot(payload.snapshot);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          return;
-        }
-      }
-    }
-
-    const interval = window.setInterval(refresh, 2_000);
-    void refresh();
-
-    return () => {
-      isMounted = false;
-      controller.abort();
-      window.clearInterval(interval);
-    };
-  }, [roomCode]);
-
-  return snapshot;
 }
