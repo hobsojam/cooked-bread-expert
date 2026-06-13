@@ -7,14 +7,9 @@ import type { SessionSnapshot } from "./session-repository";
 
 describe("live session view", () => {
   it("builds a JSON-safe snapshot for polling clients", () => {
-    const snapshot = {
-      session: {
-        roomCode: "BRIGHT-MAPLE-42",
-        status: "speaking",
-        speakerAlias: "Sample Speaker",
-        createdAt: new Date("2026-06-12T08:00:00.000Z"),
-        expiresAt: new Date("2026-06-12T14:00:00.000Z"),
-      },
+    const snapshot = createSnapshotFixture({
+      elapsedSeconds: 125,
+      isTimerRunning: true,
       timerEvents: [
         {
           type: "start",
@@ -22,43 +17,6 @@ describe("live session view", () => {
           createdByAlias: "Sample Evaluator",
         },
       ],
-      fillerEvents: [],
-      feedback: [
-        {
-          evaluatorAlias: "Evaluator One",
-          submittedAt: new Date("2026-06-12T08:10:00.000Z"),
-          responses: [
-            {
-              category: "Structure",
-              option: "Effective",
-              comment: "Clear sections.",
-            },
-          ],
-        },
-      ],
-      feedbackSummary: {
-        evaluatorCount: 1,
-        responseCount: 1,
-        qualityResponseCount: 1,
-        notObservedCount: 0,
-        byCategory: {
-          Structure: {
-            responseCount: 1,
-            qualityResponseCount: 1,
-            notObservedCount: 0,
-            options: {
-              "Not observed": 0,
-              "Needs attention": 0,
-              Developing: 0,
-              Effective: 1,
-              Strong: 0,
-              Exceptional: 0,
-            },
-          },
-        },
-      },
-      elapsedSeconds: 125,
-      isTimerRunning: true,
       fillerCounts: {
         um: 2,
         ah: 0,
@@ -66,7 +24,7 @@ describe("live session view", () => {
         so: 1,
         other: 0,
       },
-    } as SessionSnapshot;
+    });
 
     const view = buildLiveSessionSnapshotView(snapshot);
 
@@ -97,7 +55,7 @@ describe("live session view", () => {
   });
 
   it("keeps written comments out of the room polling snapshot", () => {
-    const snapshot = {
+    const snapshot = createSnapshotFixture({
       session: {
         roomCode: "BRIGHT-MAPLE-42",
         status: "feedback-discussion",
@@ -105,52 +63,7 @@ describe("live session view", () => {
         createdAt: new Date("2026-06-12T08:00:00.000Z"),
         expiresAt: new Date("2026-06-12T14:00:00.000Z"),
       },
-      timerEvents: [],
-      fillerEvents: [],
-      feedback: [
-        {
-          evaluatorAlias: "Evaluator One",
-          submittedAt: new Date("2026-06-12T08:10:00.000Z"),
-          responses: [
-            {
-              category: "Structure",
-              option: "Effective",
-              comment: "Clear sections.",
-            },
-          ],
-        },
-      ],
-      feedbackSummary: {
-        evaluatorCount: 1,
-        responseCount: 1,
-        qualityResponseCount: 1,
-        notObservedCount: 0,
-        byCategory: {
-          Structure: {
-            responseCount: 1,
-            qualityResponseCount: 1,
-            notObservedCount: 0,
-            options: {
-              "Not observed": 0,
-              "Needs attention": 0,
-              Developing: 0,
-              Effective: 1,
-              Strong: 0,
-              Exceptional: 0,
-            },
-          },
-        },
-      },
-      elapsedSeconds: 0,
-      isTimerRunning: false,
-      fillerCounts: {
-        um: 0,
-        ah: 0,
-        like: 0,
-        so: 0,
-        other: 0,
-      },
-    } as SessionSnapshot;
+    });
 
     expect(buildLiveSessionSnapshotView(snapshot)).not.toHaveProperty(
       "categorySummaries",
@@ -171,3 +84,67 @@ describe("live session view", () => {
     ]);
   });
 });
+
+function createSnapshotFixture(
+  overrides: Partial<SessionSnapshot> = {},
+): SessionSnapshot {
+  const snapshot = {
+    session: {
+      roomCode: "BRIGHT-MAPLE-42",
+      status: "speaking",
+      speakerAlias: "Sample Speaker",
+      createdAt: new Date("2026-06-12T08:00:00.000Z"),
+      expiresAt: new Date("2026-06-12T14:00:00.000Z"),
+    },
+    timerEvents: [],
+    fillerEvents: [],
+    feedback: [
+      {
+        evaluatorAlias: "Evaluator One",
+        submittedAt: new Date("2026-06-12T08:10:00.000Z"),
+        responses: [
+          {
+            category: "Structure",
+            option: "Effective",
+            comment: "Clear sections.",
+          },
+        ],
+      },
+    ],
+    feedbackSummary: {
+      evaluatorCount: 1,
+      responseCount: 1,
+      qualityResponseCount: 1,
+      notObservedCount: 0,
+      byCategory: {
+        Structure: {
+          responseCount: 1,
+          qualityResponseCount: 1,
+          notObservedCount: 0,
+          options: {
+            "Not observed": 0,
+            "Needs attention": 0,
+            Developing: 0,
+            Effective: 1,
+            Strong: 0,
+            Exceptional: 0,
+          },
+        },
+      },
+    },
+    elapsedSeconds: 0,
+    isTimerRunning: false,
+    fillerCounts: {
+      um: 0,
+      ah: 0,
+      like: 0,
+      so: 0,
+      other: 0,
+    },
+  } as SessionSnapshot;
+
+  return {
+    ...snapshot,
+    ...overrides,
+  };
+}
