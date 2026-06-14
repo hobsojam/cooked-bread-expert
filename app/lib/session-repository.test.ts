@@ -156,7 +156,7 @@ describe("MemorySessionRepository", () => {
     ).resolves.toBeNull();
   });
 
-  it("stores feedback from multiple evaluators", async () => {
+  it("stores feedback from multiple evaluators and returns true for each", async () => {
     const repository = new MemorySessionRepository();
     const session = await repository.createSession({
       speakerAlias: "Sample Speaker",
@@ -164,7 +164,7 @@ describe("MemorySessionRepository", () => {
       roomCodeGenerator: () => "BRIGHT-MAPLE-42",
     });
 
-    await repository.submitFeedback({
+    const firstResult = await repository.submitFeedback({
       roomCode: session.roomCode,
       evaluatorAlias: "Evaluator One",
       responses: [
@@ -176,7 +176,7 @@ describe("MemorySessionRepository", () => {
       ],
       submittedAt: new Date("2026-06-12T08:10:00.000Z"),
     });
-    await repository.submitFeedback({
+    const secondResult = await repository.submitFeedback({
       roomCode: session.roomCode,
       evaluatorAlias: "Evaluator Two",
       responses: [
@@ -187,6 +187,9 @@ describe("MemorySessionRepository", () => {
       ],
       submittedAt: new Date("2026-06-12T08:11:00.000Z"),
     });
+
+    expect(firstResult).toBe(true);
+    expect(secondResult).toBe(true);
 
     const snapshot = await repository.getSessionSnapshot(
       session.roomCode,
@@ -199,6 +202,41 @@ describe("MemorySessionRepository", () => {
       1,
     );
     expect(snapshot?.feedbackSummary.byCategory.Structure.options.Strong).toBe(1);
+  });
+
+  it("returns false and ignores a duplicate submission from the same alias", async () => {
+    const repository = new MemorySessionRepository();
+    const session = await repository.createSession({
+      speakerAlias: "Sample Speaker",
+      now: new Date("2026-06-12T08:00:00.000Z"),
+      roomCodeGenerator: () => "BRIGHT-MAPLE-42",
+    });
+
+    await repository.submitFeedback({
+      roomCode: session.roomCode,
+      evaluatorAlias: "Evaluator One",
+      responses: [{ category: "Structure", option: "Effective" }],
+      submittedAt: new Date("2026-06-12T08:10:00.000Z"),
+    });
+
+    const duplicateResult = await repository.submitFeedback({
+      roomCode: session.roomCode,
+      evaluatorAlias: "Evaluator One",
+      responses: [{ category: "Structure", option: "Strong" }],
+      submittedAt: new Date("2026-06-12T08:11:00.000Z"),
+    });
+
+    expect(duplicateResult).toBe(false);
+
+    const snapshot = await repository.getSessionSnapshot(
+      session.roomCode,
+      new Date("2026-06-12T08:12:00.000Z"),
+    );
+
+    expect(snapshot?.feedback).toHaveLength(1);
+    expect(snapshot?.feedbackSummary.evaluatorCount).toBe(1);
+    expect(snapshot?.feedbackSummary.byCategory.Structure.options.Effective).toBe(1);
+    expect(snapshot?.feedbackSummary.byCategory.Structure.options.Strong).toBe(0);
   });
 
   it("summarizes not observed separately from quality feedback", async () => {
