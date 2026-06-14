@@ -68,11 +68,15 @@ export async function submitSessionFeedback(formData: FormData) {
   });
 
   if (roomCode) {
-    await getSessionRepository().submitFeedback({
+    const accepted = await getSessionRepository().submitFeedback({
       roomCode,
       evaluatorAlias,
       responses,
     });
+
+    if (!accepted) {
+      redirect(`/session/${roomCode}?alreadySubmitted=1`);
+    }
   }
 
   redirect(`/session/${roomCode}`);

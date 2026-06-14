@@ -27,7 +27,7 @@ export type SessionRepository = Readonly<{
   getSessionSnapshot(roomCode: string, now?: Date): Promise<SessionSnapshot | null>;
   addTimerEvent(input: AddTimerEventInput): Promise<void>;
   addFillerEvent(input: AddFillerEventInput): Promise<void>;
-  submitFeedback(input: SubmitFeedbackInput): Promise<void>;
+  submitFeedback(input: SubmitFeedbackInput): Promise<boolean>;
   expireSession(roomCode: string, now?: Date): Promise<void>;
   deleteSession(roomCode: string): Promise<void>;
 }>;
@@ -228,11 +228,11 @@ export class MemorySessionRepository implements SessionRepository {
     const record = await this.#getMutableRecord(roomCode, submittedAt);
 
     if (!record) {
-      return;
+      return false;
     }
 
     if (record.feedback.some((f) => f.evaluatorAlias === evaluatorAlias)) {
-      return;
+      return false;
     }
 
     record.feedback.push({
@@ -244,6 +244,8 @@ export class MemorySessionRepository implements SessionRepository {
         comment: response.comment || undefined,
       })),
     });
+
+    return true;
   }
 
   expireSession(roomCode: string, now = new Date()) {

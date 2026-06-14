@@ -16,10 +16,12 @@ type SessionPageProps = Readonly<{
   params: Promise<{
     roomCode: string;
   }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }>;
 
-export default async function SessionPage({ params }: SessionPageProps) {
+export default async function SessionPage({ params, searchParams }: SessionPageProps) {
   const { roomCode } = await params;
+  const { alreadySubmitted } = await searchParams;
   const decodedRoomCode = normalizeRoomCode(decodeURIComponent(roomCode));
   const snapshot =
     await getSessionRepository().getSessionSnapshot(decodedRoomCode);
@@ -40,7 +42,15 @@ export default async function SessionPage({ params }: SessionPageProps) {
               : "This demo room was not found or has expired. You can still inspect the page shape with the room code."}
           </p>
           <PrivacyNotice />
-          {session ? (
+          {session && alreadySubmitted ? (
+            <div className="form-panel">
+              <h2>Feedback already submitted</h2>
+              <p>
+                Feedback has already been recorded for this alias in this
+                session. Each evaluator can submit once per session.
+              </p>
+            </div>
+          ) : session ? (
             <form
               action={submitSessionFeedback}
               className="form-panel feedback-form"
