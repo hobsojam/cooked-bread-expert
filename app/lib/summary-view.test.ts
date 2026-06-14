@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildCategorySummaryViews, formatElapsed } from "./summary-view";
-import type { SessionSnapshot } from "./session-repository";
+import {
+  buildCategorySummaryViews,
+  formatElapsed,
+  type SummaryInput,
+} from "./summary-view";
 
 describe("summary view", () => {
   it("formats elapsed time", () => {
@@ -57,7 +60,7 @@ describe("summary view", () => {
           },
         },
       },
-    } as SessionSnapshot;
+    } satisfies SummaryInput;
 
     const views = buildCategorySummaryViews(snapshot);
 
