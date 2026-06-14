@@ -231,6 +231,10 @@ export class MemorySessionRepository implements SessionRepository {
       return;
     }
 
+    if (record.feedback.some((f) => f.evaluatorAlias === evaluatorAlias)) {
+      return;
+    }
+
     record.feedback.push({
       evaluatorAlias,
       submittedAt,
