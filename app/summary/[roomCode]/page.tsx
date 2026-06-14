@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { normalizeRoomCode } from "../../lib/room-code";
+import { normalizeRoomCode, isValidRoomCode } from "../../lib/room-code";
 import { DemoRibbon } from "../../components/DemoRibbon";
 import { LiveSummaryReport } from "../../components/LiveSummaryReport";
 import { PrivacyNotice } from "../../components/PrivacyNotice";
@@ -19,8 +19,10 @@ type SummaryPageProps = Readonly<{
 export default async function SummaryPage({ params }: SummaryPageProps) {
   const { roomCode } = await params;
   const decodedRoomCode = normalizeRoomCode(decodeURIComponent(roomCode));
-  const snapshot =
-    await getSessionRepository().getSessionSnapshot(decodedRoomCode);
+  const validRoomCode = isValidRoomCode(decodedRoomCode);
+  const snapshot = validRoomCode
+    ? await getSessionRepository().getSessionSnapshot(decodedRoomCode)
+    : null;
   const liveSnapshot = snapshot ? buildLiveSummarySnapshotView(snapshot) : null;
 
   return (
@@ -38,9 +40,11 @@ export default async function SummaryPage({ params }: SummaryPageProps) {
           </p>
           <PrivacyNotice />
         </div>
-        <Link className="button-link secondary" href={`/session/${decodedRoomCode}`}>
-          Back to room
-        </Link>
+        {validRoomCode && (
+          <Link className="button-link secondary" href={`/session/${decodedRoomCode}`}>
+            Back to room
+          </Link>
+        )}
       </section>
 
       <LiveSummaryReport
