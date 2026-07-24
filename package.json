@@ -13,7 +13,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "latest",
+    "next": "^16.2.11",
     "react": "latest",
     "react-dom": "latest"
   },
@@ -25,6 +25,7 @@
     "vitest": "^4.1.10"
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.10",
+    "sharp": "^0.35.3"
   }
 }
