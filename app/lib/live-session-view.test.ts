@@ -3,7 +3,7 @@ import {
   buildLiveSessionSnapshotView,
   buildLiveSummarySnapshotView,
 } from "./live-session-view";
-import type { SessionSnapshot } from "./session-repository";
+import { summarizeFeedback, type SessionSnapshot } from "./session-repository";
 
 describe("live session view", () => {
   it("builds a JSON-safe snapshot for polling clients", () => {
@@ -88,7 +88,21 @@ describe("live session view", () => {
 function createSnapshotFixture(
   overrides: Partial<SessionSnapshot> = {},
 ): SessionSnapshot {
-  const snapshot = {
+  const feedback: SessionSnapshot["feedback"] = [
+    {
+      evaluatorAlias: "Evaluator One",
+      submittedAt: new Date("2026-06-12T08:10:00.000Z"),
+      responses: [
+        {
+          category: "Structure",
+          option: "Effective",
+          comment: "Clear sections.",
+        },
+      ],
+    },
+  ];
+
+  const snapshot: SessionSnapshot = {
     session: {
       roomCode: "BRIGHT-MAPLE-42",
       status: "speaking",
@@ -98,40 +112,8 @@ function createSnapshotFixture(
     },
     timerEvents: [],
     fillerEvents: [],
-    feedback: [
-      {
-        evaluatorAlias: "Evaluator One",
-        submittedAt: new Date("2026-06-12T08:10:00.000Z"),
-        responses: [
-          {
-            category: "Structure",
-            option: "Effective",
-            comment: "Clear sections.",
-          },
-        ],
-      },
-    ],
-    feedbackSummary: {
-      evaluatorCount: 1,
-      responseCount: 1,
-      qualityResponseCount: 1,
-      notObservedCount: 0,
-      byCategory: {
-        Structure: {
-          responseCount: 1,
-          qualityResponseCount: 1,
-          notObservedCount: 0,
-          options: {
-            "Not observed": 0,
-            "Needs attention": 0,
-            Developing: 0,
-            Effective: 1,
-            Strong: 0,
-            Exceptional: 0,
-          },
-        },
-      },
-    },
+    feedback,
+    feedbackSummary: summarizeFeedback(feedback),
     elapsedSeconds: 0,
     isTimerRunning: false,
     fillerCounts: {
@@ -141,7 +123,7 @@ function createSnapshotFixture(
       so: 0,
       other: 0,
     },
-  } as SessionSnapshot;
+  };
 
   return {
     ...snapshot,
