@@ -13,7 +13,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "^16.4.3",
+    "next": "^16.4.4",
     "react": "latest",
     "react-dom": "latest"
   },
